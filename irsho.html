@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#8b35d1">
+<title>IRSHO — Share Your World</title>
+<style>
+:root{--pink:#e1306c;--purple:#8338ec;--bg:#f6f5f8;--line:#e8e5eb}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font:15px Arial,sans-serif;color:#17131d;padding-bottom:72px}
+button,input,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:10px;padding:10px 14px;background:var(--purple);color:#fff;font-weight:700}
+input,textarea{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;margin:6px 0}
+header{height:60px;position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.logo{font-size:28px;font-weight:900;letter-spacing:1px;background:linear-gradient(45deg,#ff8a00,#e1306c,#8338ec);color:transparent;background-clip:text}
+.wrap{max-width:650px;margin:auto}.panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:15px;margin:12px}
+.hidden{display:none!important}.muted{color:#777;font-size:13px}.row{display:flex;align-items:center;gap:10px}.between{justify-content:space-between}
+.avatar{width:42px;height:42px;border-radius:50%;object-fit:cover;background:#eee}.grow{flex:1;min-width:0}
+.tabs{position:fixed;bottom:0;left:0;right:0;height:62px;background:#fff;border-top:1px solid var(--line);display:flex;justify-content:space-around;align-items:center;z-index:8}
+.tabs button{background:transparent;color:#292331;font-size:22px;padding:8px}
+.page{display:none}.page.active{display:block}
+.storyrow{display:flex;gap:14px;overflow:auto;padding:14px;background:#fff;border-bottom:1px solid var(--line)}
+.story{text-align:center;min-width:64px;font-size:12px}.story img{width:58px;height:58px;border-radius:50%;padding:2px;border:3px solid var(--pink);object-fit:cover}
+.post{background:#fff;margin:12px 0;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.posthead{display:flex;align-items:center;gap:10px;padding:12px}.postmedia{display:block;width:100%;max-height:620px;object-fit:contain;background:#111}
+.postbody{padding:12px}.actions{display:flex;gap:8px}.actions button{background:transparent;color:#292331;font-size:22px;padding:4px 8px}.actions .on{color:#e11d48}
+.caption{margin:8px 0;line-height:1.45;overflow-wrap:anywhere}.commentline{font-size:13px;margin:5px 0}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}.grid img,.grid video{width:100%;height:125px;object-fit:cover;background:#222}
+.primary{width:100%;margin-top:8px}.danger{background:#b42318}.light{background:#eee;color:#222}
+.smallbtn{padding:7px 10px;font-size:12px}.auth{max-width:420px;margin:35px auto}
+.chatlist button{width:100%;text-align:left;margin:4px 0;background:#fff;color:#222;border:1px solid var(--line)}
+.bubble{padding:9px 12px;border-radius:14px;background:#eee;margin:6px 0;max-width:82%;overflow-wrap:anywhere}
+.mine{background:#eadcff;margin-left:auto}.chatmessages{height:48vh;overflow:auto;padding:10px;background:#fff;border:1px solid var(--line);border-radius:12px}
+#toast{position:fixed;top:68px;left:50%;transform:translateX(-50%);z-index:20;background:#222;color:#fff;padding:10px 14px;border-radius:10px;display:none;max-width:90%}
+</style>
+</head>
+<body>
+<header><div class="logo">IRSHO</div><div class="row"><button class="light smallbtn" onclick="openPage('notifications')">♡</button><button class="light smallbtn" onclick="openPage('chats')">✉</button><button id="logoutBtn" class="smallbtn hidden" onclick="logout()">Logout</button></div></header>
+<div id="toast"></div>
+<div class="wrap">
+<section id="authPage" class="panel auth">
+<h1 style="text-align:center;color:#8338ec">Welcome to IRSHO</h1>
+<p class="muted">Create an account or sign in.</p>
+<input id="authName" placeholder="Name (signup only)" maxlength="40">
+<input id="authUsername" placeholder="Username (signup only)" maxlength="20">
+<input id="authEmail" type="email" placeholder="Email">
+<input id="authPassword" type="password" placeholder="Password (at least 6 characters)">
+<button class="primary" onclick="signup()">Create account</button>
+<button class="primary light" onclick="login()">Login</button>
+<p class="muted">Use a strong password. Do not share private information in posts or chats.</p>
+</section>
+
+<main id="app" class="hidden">
+<section id="homePage" class="page active">
+<div class="storyrow" id="stories">
+<div class="story"><img src="https://i.pravatar.cc/100?img=1"><p>IRSHO</p></div>
+<div class="story"><img src="https://i.pravatar.cc/100?img=2"><p>Explore</p></div>
+<div class="story"><img src="https://i.pravatar.cc/100?img=3"><p>Friends</p></div>
+</div>
+<div class="panel">
+<h3>Create a post</h3>
+<textarea id="postCaption" rows="2" maxlength="1000" placeholder="Write a caption..."></textarea>
+<input id="postFile" type="file" accept="image/*,video/*">
+<p class="muted">Images/videos up to 20 MB. Only upload content you have permission to share.</p>
+<button class="primary" onclick="publishPost()">Share post</button>
+</div>
+<div id="feed"></div>
+</section>
+
+<section id="searchPage" class="page">
+<div class="panel"><h2>Find people</h2><input id="searchInput" placeholder="Search username..." oninput="searchUsers()"><div id="searchResults"></div></div>
+</section>
+
+<section id="reelsPage" class="page"><div class="panel"><h2>IRSHO Reels</h2><p class="muted">Short videos shared by the community.</p><div id="reelsFeed"></div></div></section>
+
+<section id="profilePage" class="page">
+<div class="panel">
+<div class="row"><img id="myAvatar" class="avatar" src="https://i.pravatar.cc/100?img=1"><div class="grow"><h2 id="myName">My profile</h2><div class="muted" id="myUsername"></div></div></div>
+<p id="myBio" style="margin:12px 0"></p>
+<div class="row between"><span id="postCount">0 posts</span><span id="followerCount">0 followers</span><span id="followingCount">0 following</span></div>
+<hr style="border:0;border-top:1px solid #eee;margin:14px 0">
+<h3>Edit profile</h3><input id="editName" placeholder="Display name" maxlength="40"><input id="editBio" placeholder="Bio" maxlength="160"><input id="avatarFile" type="file" accept="image/*"><button onclick="saveProfile()">Save profile</button>
+</div><div class="grid" id="myGrid"></div>
+</section>
+
+<section id="notificationsPage" class="page"><div class="panel"><h2>Notifications</h2><div id="notificationList"></div></div></section>
+
+<section id="chatsPage" class="page"><div class="panel"><h2>Messages</h2><input id="chatUsername" placeholder="Enter exact username to message"><button onclick="startChat()">Start chat</button><div id="chatList" class="chatlist" style="margin-top:12px"></div><div id="chatArea" class="hidden"><h3 id="chatTitle" style="margin:12px 0"></h3><div id="chatMessages" class="chatmessages"></div><div class="row"><input id="chatText" placeholder="Write a message..." maxlength="1000"><button onclick="sendMessage()">Send</button></div></div></div></section>
+
+<section id="userPage" class="page"><div class="panel" id="userProfile"></div></section>
+</main>
+</div>
+
+<nav id="nav" class="tabs hidden">
+<button onclick="openPage('home')">⌂</button><button onclick="openPage('search')">⌕</button><button onclick="openPage('reels')">▶</button><button onclick="openPage('chats')">✉</button><button onclick="openPage('profile')">◉</button>
+</nav>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-storage-compat.js"></script>
+<script>
+/* PASTE YOUR FIREBASE WEB CONFIG BELOW */
+const firebaseConfig = {
+  apiKey:"YOUR_API_KEY",
+  authDomain:"YOUR_PROJECT.firebaseapp.com",
+  projectId:"YOUR_PROJECT_ID",
+  storageBucket:"YOUR_STORAGE_BUCKET",
+  messagingSenderId:"YOUR_SENDER_ID",
+  appId:"YOUR_APP_ID"
+};
+
+let auth,db,storage,me=null,feedUnsub=null,chatUnsub=null,activeChat=null,notifyUnsub=null;
+function toast(t){const e=document.getElementById('toast');e.textContent=t;e.style.display='block';setTimeout(()=>e.style.display='none',3000)}
+function esc(s){return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function openPage(name){
+ document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+ const el=document.getElementById(name+'Page');if(el)el.classList.add('active');
+ if(name==='profile')loadMyProfile();
+ if(name==='notifications')loadNotifications();
+ if(name==='chats')loadChatList();
+ if(name==='reels')loadReels();
+}
+function usernameValid(s){return /^[a-zA-Z0-9_.]{3,20}$/.test(s)}
+function chatId(a,b){return [a,b].sort().join('_')}
+function blockedBy(uid){return db.collection('users').doc(me.uid).collection('blocked').doc(uid).get()}
+async function signup(){
+ const name=authName.value.trim(),username=authUsername.value.trim().toLowerCase(),email=authEmail.value.trim(),password=authPassword.value;
+ if(!name||!usernameValid(username)||!email||password.length<6){toast('Enter name, valid username, email and password (6+ characters)');return}
+ try{
+  const exists=await db.collection('users').where('username','==',username).limit(1).get();
+  if(!exists.empty){toast('Username already taken');return}
+  const cred=await auth.createUserWithEmailAndPassword(email,password);
+  await db.collection('users').doc(cred.user.uid).set({uid:cred.user.uid,name,username,email,bio:'',photoURL:'',createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  toast('Account created!');
+ }catch(e){toast(e.message)}
+}
+async function login(){try{await auth.signInWithEmailAndPassword(authEmail.value.trim(),authPassword.value)}catch(e){toast(e.message)}}
+async function logout(){if(chatUnsub)chatUnsub();if(feedUnsub)feedUnsub();await auth.signOut();toast('Logged out')}
+auth=firebase.initializeApp(firebaseConfig)&&firebase.auth();
+db=firebase.firestore();storage=firebase.storage();
+auth.onAuthStateChanged(async user=>{
+ me=user;
+ const signed=!!user;
+ authPage.classList.toggle('hidden',signed);app.classList.toggle('hidden',!signed);nav.classList.toggle('hidden',!signed);logoutBtn.classList.toggle('hidden',!signed);
+ if(signed){await ensureProfile();loadFeed();loadMyProfile();loadNotifications();}
+ else{if(feedUnsub)feedUnsub();if(notifyUnsub)notifyUnsub();if(chatUnsub)chatUnsub();}
+});
+async function ensureProfile(){const r=await db.collection('users').doc(me.uid).get();if(!r.exists)toast('Profile setup incomplete. Contact support.')}
+async function uploadFile(file,folder){
+ if(!file)throw Error('Choose a file first');
+ if(file.size>20*1024*1024)throw Error('File must be smaller than 20 MB');
+ if(!/^(image|video)\//.test(file.type))throw Error('Only image or video files are allowed');
+ const ref=storage.ref(folder+'/'+me.uid+'/'+Date.now()+'_'+file.name.replace(/[^a-zA-Z0-9._-]/g,'_'));
+ await ref.put(file);return await ref.getDownloadURL();
+}
+async function publishPost(){
+ const file=postFile.files[0],caption=postCaption.value.trim();
+ if(!file){toast('Select an image or video');return}
+ try{
+  toast('Uploading...');
+  const url=await uploadFile(file,'uploads');
+  const type=file.type.startsWith('video/')?'video':'image';
+  const u=(await db.collection('users').doc(me.uid).get()).data();
+  await db.collection('posts').add({uid:me.uid,username:u.username,name:u.name,caption,mediaUrl:url,mediaType:type,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  postCaption.value='';postFile.value='';toast('Post shared!');
+ }catch(e){toast(e.message)}
+}
+function mediaElement(url,type,cls='postmedia'){
+ const el=document.createElement(type==='video'?'video':'img');el.className=cls;el.src=url;
+ if(type==='video'){el.controls=true;el.playsInline=true}
+ else el.alt='Shared post';return el;
+}
+function loadFeed(){
+ if(feedUnsub)feedUnsub();
+ feedUnsub=db.collection('posts').orderBy('createdAt','desc').limit(60).onSnapshot(async snap=>{
+  feed.innerHTML='';
+  for(const d of snap.docs){
+   const p=d.data();if(p.uid===me.uid || !(await blockedBy(p.uid)).exists===false){} 
+   if((await blockedBy(p.uid)).exists)continue;
+   const card=document.createElement('article');card.className='post';
+   const head=document.createElement('div');head.className='posthead';
+   const name=document.createElement('b');name.textContent=p.name||p.username||'IRSHO user';
+   const handle=document.createElement('span');handle.className='muted';handle.textContent='@'+(p.username||'user');
+   const profileBtn=document.createElement('button');profileBtn.className='light smallbtn';profileBtn.textContent='Profile';profileBtn.onclick=()=>viewUser(p.uid);
+   head.append(name,handle,profileBtn);
+   const media=mediaElement(p.mediaUrl,p.mediaType);
+   const body=document.createElement('div');body.className='postbody';
+   const actions=document.createElement('div');actions.className='actions';
+   const like=document.createElement('button');like.textContent='♡';like.onclick=()=>toggleLike(d.id);
+   const comment=document.createElement('button');comment.textContent='💬';comment.onclick=()=>commentPost(d.id);
+   const report=document.createElement('button');report.textContent='⚑';report.title='Report post';report.onclick=()=>reportContent('post',d.id,p.uid);
+   actions.append(like,comment,report);
+   const cap=document.createElement('p');cap.className='caption';cap.textContent=(p.caption||'');
+   const commentBox=document.createElement('div');commentBox.id='comments_'+d.id;
+   body.append(actions,cap,commentBox);card.append(head,media,body);feed.append(card);
+   bindLike(d.id,like);loadPostComments(d.id,commentBox);
+  }
+ },e=>toast(e.message));
+}
+function bindLike(id,btn){db.collection('posts').doc(id).collection('likes').doc(me.uid).onSnapshot(s=>{btn.textContent=s.exists?'♥':'♡';btn.classList.toggle('on',s.exists)})}
+async function toggleLike(id){
+ const ref=db.collection('posts').doc(id).collection('likes').doc(me.uid),s=await ref.get();
+ if(s.exists)await ref.delete();else{
+  await ref.set({uid:me.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+  const p=(await db.collection('posts').doc(id).get()).data();
+  if(p.uid!==me.uid)await notify(p.uid,'like','Someone liked your post',id);
+ }
+}
+async function commentPost(id){const t=prompt('Write a comment');if(!t||!t.trim())return;
+ const p=(await db.collection('posts').doc(id).get()).data();
+ await db.collection('posts').doc(id).collection('comments').add({uid:me.uid,text:t.trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+ if(p&&p.uid!==me.uid)await notify(p.uid,'comment','Someone commented on your post',id);
+}
+function loadPostComments(id,box){db.collection('posts').doc(id).collection('comments').orderBy('createdAt','asc').limit(20).onSnapshot(s=>{box.innerHTML='';s.forEach(d=>{const p=document.createElement('p');p.className='commentline';p.textContent=d.data().text;box.append(p)})})}
+async function loadMyProfile(){
+ const s=await db.collection('users').doc(me.uid).get();if(!s.exists)return;const u=s.data();
+ myName.textContent=u.name||'IRSHO User';myUsername.textContent='@'+u.username;myBio.textContent=u.bio||'';
+ editName.value=u.name||'';editBio.value=u.bio||'';myAvatar.src=u.photoURL||'https://i.pravatar.cc/100';
+ const posts=await db.collection('posts').where('uid','==',me.uid).get();postCount.textContent=posts.size+' posts';myGrid.innerHTML='';
+ posts.forEach(d=>{const p=d.data();const el=mediaElement(p.mediaUrl,p.mediaType);myGrid.append(el)});
+ const followers=await db.collection('users').doc(me.uid).collection('followers').get();
+ const following=await db.collection('users').doc(me.uid).collection('following').get();
+ followerCount.textContent=followers.size+' followers';followingCount.textContent=following.size+' following';
+}
+async function saveProfile(){
+ try{const name=editName.value.trim(),bio=editBio.value.trim();let photoURL;
+ const f=avatarFile.files[0];if(f){if(!f.type.startsWith('image/'))throw Error('Profile photo must be an image');photoURL=await uploadFile(f,'avatars')}
+ const data={name,bio};if(photoURL)data.photoURL=photoURL;
+ await db.collection('users').doc(me.uid).update(data);toast('Profile updated');loadMyProfile();
+ }catch(e){toast(e.message)}
+}
+async function searchUsers(){
+ const q=searchInput.value.trim().toLowerCase();searchResults.innerHTML='';if(q.length<2)return;
+ try{const s=await db.collection('users').orderBy('username').startAt(q).endAt(q+'\uf8ff').limit(20).get();
+ s.forEach(d=>{if(d.id===me.uid)return;const u=d.data();const b=document.createElement('button');b.className='light';b.style.width='100%';b.style.margin='4px 0';b.textContent=u.name+' (@'+u.username+')';b.onclick=()=>viewUser(d.id);searchResults.append(b)})}
+ catch(e){toast(e.message)}
+}
+async function viewUser(uid){
+ if(uid===me.uid){openPage('profile');return}
+ const s=await db.collection('users').doc(uid).get();if(!s.exists){toast('User not found');return}
+ const u=s.data(),box=userProfile;box.innerHTML='';
+ const h=document.createElement('h2');h.textContent=u.name||u.username;
+ const handle=document.createElement('p');handle.textContent='@'+u.username;
+ const bio=document.createElement('p');bio.textContent=u.bio||'';
+ const follow=document.createElement('button');const fref=db.collection('users').doc(me.uid).collection('following').doc(uid);
+ const fs=await fref.get();follow.textContent=fs.exists?'Unfollow':'Follow';
+ follow.onclick=()=>toggleFollow(uid,follow);
+ const chat=document.createElement('button');chat.className='light';chat.textContent='Message';chat.onclick=()=>openChatWith(uid,u.username);
+ const block=document.createElement('button');block.className='danger';block.textContent='Block';block.onclick=()=>blockUser(uid);
+ const report=document.createElement('button');report.className='light';report.textContent='Report';report.onclick=()=>reportContent('user',uid,uid);
+ box.append(h,handle,bio,follow,chat,block,report);
+ const grid=document.createElement('div');grid.className='grid';const ps=await db.collection('posts').where('uid','==',uid).get();
+ ps.forEach(d=>{const p=d.data();grid.append(mediaElement(p.mediaUrl,p.mediaType))});box.append(grid);openPage('user');
+}
+async function toggleFollow(uid,btn){
+ const following=db.collection('users').doc(me.uid).collection('following').doc(uid);
+ const follower=db.collection('users').doc(uid).collection('followers').doc(me.uid);
+ const s=await following.get();
+ if(s.exists){await following.delete();await follower.delete();btn.textContent='Follow'}
+ else{await following.set({uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});await follower.set({uid:me.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});btn.textContent='Unfollow';await notify(uid,'follow','Someone followed you',me.uid)}
+}
+async function notify(uid,type,text,ref){await db.collection('users').doc(uid).collection('notifications').add({type,text,ref,from:me.uid,createdAt:firebase.firestore.FieldValue.serverTimestamp(),read:false})}
+function loadNotifications(){
+ if(notifyUnsub)notifyUnsub();
+ notifyUnsub=db.collection('users').doc(me.uid).collection('notifications').orderBy('createdAt','desc').limit(40).onSnapshot(s=>{notificationList.innerHTML='';s.forEach(d=>{const p=document.createElement('p');p.className='panel';p.textContent=d.data().text;notificationList.append(p)})});
+}
+async function reportContent(type,id,owner){
+ const reason=prompt('Why are you reporting this?');if(!reason||!reason.trim())return;
+ await db.collection('reports').add({type,targetId:id,ownerUid:owner,reporterUid:me.uid,reason:reason.trim(),createdAt:firebase.firestore.FieldValue.serverTimestamp(),status:'new'});
+ toast('Report submitted');
+}
+async function blockUser(uid){
+ if(!confirm('Block this account?'))return;
+ await db.collection('users').doc(me.uid).collection('blocked').doc(uid).set({uid,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+ toast('Account blocked');openPage('home');
+}
+async function startChat(){
+ const username=chatUsername.value.trim().toLowerCase();if(!username){toast('Enter a username');return}
+ const s=await db.collection('users').where('username','==',username).limit(1).get();
+ if(s.empty){toast('User not found');return}const d=s.docs[0];if(d.id===me.uid){toast('You cannot message yourself');return}
+ openChatWith(d.id,username);
+}
+async function openChatWith(uid,username){
+ const blocked=await blockedBy(uid);if(blocked.exists){toast('You blocked this user');return}
+ const id=chatId(me.uid,uid);activeChat={id,uid};
+ await db.collection('chats').doc(id).set({participants:[me.uid,uid],updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+ chatTitle.textContent='Chat with @'+username;chatArea.classList.remove('hidden');loadMessages();
+}
+function loadChatList(){
+ db.collection('chats').where('participants','array-contains',me.uid).onSnapshot(async s=>{
+  chatList.innerHTML='';
+  for(const d of s.docs){const other=d.data().participants.find(x=>x!==me.uid);if(!other)continue;
+   const u=await db.collection('users').doc(other).get();const b=document.createElement('button');b.textContent=u.exists?'@'+u.data().username:'IRSHO user';b.onclick=()=>openChatWith(other,u.exists?u.data().username:'user');chatList.append(b)}
+ });
+}
+function loadMessages(){
+ if(chatUnsub)chatUnsub();
+ chatUnsub=db.collection('chats').doc(activeChat.id).collection('messages').orderBy('createdAt','asc').limit(100).onSnapshot(s=>{
+  chatMessages.innerHTML='';s.forEach(d=>{const m=d.data(),b=document.createElement('div');b.className='bubble'+(m.uid===me.uid?' mine':'');b.textContent=m.text;chatMessages.append(b)});chatMessages.scrollTop=chatMessages.scrollHeight;
+ });
+}
+async function sendMessage(){
+ const text=chatText.value.trim();if(!text||!activeChat)return;
+ try{const blocked=await db.collection('users').doc(me.uid).collection('blocked').doc(activeChat.uid).get();if(blocked.exists){toast('Unblock this user before messaging');return}
+ await db.collection('chats').doc(activeChat.id).collection('messages').add({uid:me.uid,text,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+ await db.collection('chats').doc(activeChat.id).set({updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+ chatText.value='';
+ }catch(e){toast(e.message)}
+}
+async function loadReels(){
+ reelsFeed.innerHTML='';const s=await db.collection('posts').where('mediaType','==','video').limit(30).get();
+ s.forEach(d=>{const p=d.data(),v=mediaElement(p.mediaUrl,'video');v.style.width='100%';v.style.maxHeight='65vh';const c=document.createElement('p');c.textContent=(p.username||'user')+' '+(p.caption||'');reelsFeed.append(v,c)});
+}
+</script>
+</body>
+</html>
